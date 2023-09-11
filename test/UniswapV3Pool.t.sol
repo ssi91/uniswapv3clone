@@ -51,6 +51,15 @@ contract UniswapV3PoolTest is Test {
         }
     }
 
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1) public {
+        if (amount0 > 0) {
+            token0.transfer(msg.sender, uint256(amount0));
+        }
+        if (amount1 > 0) {
+            token1.transfer(msg.sender, uint256(amount1));
+        }
+    }
+
     function testMintSuccess() public {
         TestCaseParams memory params = TestCaseParams({
             wethBalance: 1 ether,
@@ -96,5 +105,60 @@ contract UniswapV3PoolTest is Test {
         assertEq(tick, params.currentTick, "Incorrect Current Tick");
 
         assertEq(pool.liquidity(), params.liquidity, "Incorrect pool liquidity");
+    }
+
+    function testSwapBuyEth() public {
+        TestCaseParams memory params = TestCaseParams({
+            wethBalance: 1 ether,
+            usdcBalance: 5000 ether,
+            currentTick: 85176,
+            lowerTick: 84222,
+            upperTick: 86129,
+            liquidity: 1517882343751509868544,
+            currentSqrtP: 5602277097478614198912276234240,
+            shouldTransferInCallback: true,
+            mintLiquidity: true
+        });
+
+        (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
+
+        token1.mint(address(this), 42 ether);
+        uint256 userBalance0Before = token0.balanceOf(address(this));
+
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this));
+
+        assertEq(amount0Delta, - 0.008396714242162444 ether, "invalid ETH out");
+        assertEq(amount1Delta, 42 ether, "invalid USDC in");
+
+        assertEq(
+            token0.balanceOf(address(this)),
+            uint256(int256(userBalance0Before) - amount0Delta),
+            "invalid ETH balance"
+        );
+        assertEq(
+            token1.balanceOf(address(this)),
+            0,
+            "invalid USDC balance"
+        );
+
+        assertEq(
+            token0.balanceOf(address(pool)),
+            uint256(int256(poolBalance0) + amount0Delta),
+            "invalid ETH pool balance"
+        );
+        assertEq(
+            token1.balanceOf(address(pool)),
+            uint256(int256(poolBalance1) + amount1Delta),
+            "invalid USDC pool balance"
+        );
+
+        assertEq(
+            pool.liquidity(),
+            1517882343751509868544,
+            "invalid current liquidity"
+        );
+        (uint160 sqrtPriceX96, int24 tick) = pool.slot0();
+        assertEq(tick, 85154, "invalid current tick");
+        assertEq(sqrtPriceX96, 5604469350942327889444743441197, "invalid current price");
     }
 }
