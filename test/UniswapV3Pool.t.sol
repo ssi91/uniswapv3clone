@@ -26,6 +26,8 @@ contract UniswapV3PoolTest is Test {
         bool mintLiquidity;
     }
 
+    UniswapV3Pool.CallbackData internal callbackData;
+
     function setUp() public {
         token0 = new ERC20Mintable("Ethers", "ETH", 18);
         token1 = new ERC20Mintable("USDC", "USDC", 18);
@@ -35,13 +37,50 @@ contract UniswapV3PoolTest is Test {
         token0.mint(address(this), params.wethBalance);
         token1.mint(address(this), params.usdcBalance);
 
+        callbackData.token0 = address(token0);
+        callbackData.token1 = address(token1);
+        callbackData.payer = address(this);
+
         pool = new UniswapV3Pool(address(token0), address(token1), params.currentSqrtP, params.currentTick);
 
         if (params.mintLiquidity) {
-            (poolBalance0, poolBalance1) = pool.mint(address(this), params.lowerTick, params.upperTick, params.liquidity);
+            token0.approve(address(this), params.wethBalance);
+            token1.approve(address(this), params.usdcBalance);
+            (poolBalance0, poolBalance1) = pool.mint(
+                address(this),
+                params.lowerTick,
+                params.upperTick,
+                params.liquidity,
+                abi.encode(callbackData)
+            );
         }
 
         shouldTransferInCallback = params.shouldTransferInCallback;
+    }
+
+    function uniswapV3MintCallback(uint256 amount0, uint256 amount1, bytes calldata data) external {
+        if (shouldTransferInCallback) {
+            UniswapV3Pool.CallbackData memory extra = abi.decode(
+                data,
+                (UniswapV3Pool.CallbackData)
+            );
+
+            IERC20(extra.token0).transferFrom(extra.payer, msg.sender, amount0);
+            IERC20(extra.token1).transferFrom(extra.payer, msg.sender, amount1);
+        }
+    }
+
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata data) external {
+        UniswapV3Pool.CallbackData memory extra = abi.decode(
+            data,
+            (UniswapV3Pool.CallbackData)
+        );
+        if (amount0 > 0) {
+            IERC20(extra.token0).transferFrom(extra.payer, msg.sender, uint256(amount0));
+        }
+        if (amount1 > 0) {
+            IERC20(extra.token1).transferFrom(extra.payer, msg.sender, uint256(amount1));
+        }
     }
 
     function uniswapV3MintCallback(uint256 amount0, uint256 amount1) public {
@@ -125,7 +164,8 @@ contract UniswapV3PoolTest is Test {
         token1.mint(address(this), 42 ether);
         uint256 userBalance0Before = token0.balanceOf(address(this));
 
-        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this));
+        token1.approve(address(this), 42 ether);
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this), abi.encode(callbackData));
 
         assertEq(amount0Delta, - 0.008396714242162444 ether, "invalid ETH out");
         assertEq(amount1Delta, 42 ether, "invalid USDC in");

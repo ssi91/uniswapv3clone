@@ -4,5 +4,5 @@ pragma solidity ^0.8.0;
 interface IUniswapV3SwapCallback {
     function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata data) external;
 
-    function uniswapV3SwapCallback(int256 amount0, int256 amount1) external;
+//    function uniswapV3SwapCallback(int256 amount0, int256 amount1) external;
 }

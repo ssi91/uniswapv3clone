@@ -8,6 +8,12 @@ import "./interfaces/IUniswapV3MintCallback.sol";
 import "./interfaces/IUniswapV3SwapCallback.sol";
 
 contract UniswapV3Pool {
+    struct CallbackData {
+        address token0;
+        address token1;
+        address payer;
+    }
+
     using Tick for mapping(int24 => Tick.Info);
     using Position for mapping(bytes32 => Position.Info);
     using Position for Position.Info;
@@ -65,7 +71,8 @@ contract UniswapV3Pool {
         address owner,
         int24 lowerTick,
         int24 upperTick,
-        uint128 amount
+        uint128 amount,
+        bytes calldata callback
     ) external returns (uint256 amount0, uint256 amount1) {
         if (lowerTick >= upperTick || lowerTick < MIN_TICK || upperTick > MAX_TICK) {
             revert("Invalid tick range");
@@ -94,7 +101,7 @@ contract UniswapV3Pool {
         if (amount1 > 0) {
             balance1Before = balance1();
         }
-        IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1);
+        IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1, callback);
 
         if (amount0 > 0 && balance0Before + amount0 > balance0()) {
             revert("Insufficient input amount");
@@ -114,7 +121,7 @@ contract UniswapV3Pool {
         balance = IERC20(token1).balanceOf(address(this));
     }
 
-    function swap(address recipient) public returns (int256 amount0, int256 amount1) {
+    function swap(address recipient, bytes calldata data) public returns (int256 amount0, int256 amount1) {
         // tick and price values are hardcoded
         // it must be calculated instead
         // as well as values of amounts
@@ -133,7 +140,7 @@ contract UniswapV3Pool {
         uint256 balance1Before = balance1();
 
         // sender sends the token1 within this callback
-        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1);
+        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
         if (balance1Before + uint256(amount1) != balance1()) {
             revert("Insufficient balance");
         }
