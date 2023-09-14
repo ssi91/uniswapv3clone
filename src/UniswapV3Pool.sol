@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./lib/Tick.sol";
 import "./lib/Position.sol";
+import "./lib/TickBitmap.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IUniswapV3MintCallback.sol";
 import "./interfaces/IUniswapV3SwapCallback.sol";
@@ -13,6 +14,9 @@ contract UniswapV3Pool {
         address token1;
         address payer;
     }
+
+    using TickBitmap for mapping(int16 => uint256);
+    mapping(int16 => uint256) public tickBitmap;
 
     using Tick for mapping(int24 => Tick.Info);
     using Position for mapping(bytes32 => Position.Info);
