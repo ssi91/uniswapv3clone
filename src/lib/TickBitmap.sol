@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "./BitMath.sol";
+
 library TickBitmap {
     function position(int24 tick) private pure returns (int16 wordPos, uint8 bitPos) {
         wordPos = int16(tick >> 8); // // 256
@@ -17,5 +19,35 @@ library TickBitmap {
 
         uint256 mask = 1 << bitPos;
         self[wordPos] ^= mask;
+    }
+
+    function nextInitializedTickWithinOneWord(
+        mapping(uint16 => uint256) storage self,
+        int24 tick,
+        int24 tickSpacing,
+        bool lte // true - selling x; moving to the right
+    ) internal view returns (int24 next, bool initialized) {
+        int24 compressed = tick / tickSpacing;
+
+        if (lte) {
+            (int16 wordPos, uint8 bitPos) = position(compressed);
+            uint256 mask = (1 << bitPos) - 1 + (1 << bitPos);
+            uint256 masked = mask & self[wordPos];
+
+            initialized = mask != 0;
+
+            next = initialized
+                ? (compressed - int24(uint24(bitPos - BitMath.mostSignificantBit(masked)))) * tickSpacing
+                : (compressed - int24(uint24(bitPos))) * tickSpacing;
+        } else {
+            (int16 wordPos, uint8 bitPos) = position(compressed + 1);
+            uint256 mask = ~((1 << bitPos) - 1);
+            uint256 masked = mask & self[wordPos];
+
+            initialized = mask != 0;
+            next = initialized
+                ? (compressed + 1 + int24(uint24(BitMath.leastSignificantBit(masked) - bitPos))) * tickSpacing
+                : (compressed + 1 + int24(uint24(type(uint8).max - bitPos))) * tickSpacing;
+        }
     }
 }
