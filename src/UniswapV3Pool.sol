@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "./lib/Math.sol";
 import "./lib/Tick.sol";
+import "./lib/TickMath.sol";
 import "./lib/Position.sol";
 import "./lib/TickBitmap.sol";
 import "./interfaces/IERC20.sol";
@@ -85,15 +87,30 @@ contract UniswapV3Pool {
             revert("Zero liquidity");
         }
 
-        ticks.update(lowerTick, amount);
-        ticks.update(upperTick, amount);
+        bool flippedLower = ticks.update(lowerTick, amount);
+        bool flippedUpper = ticks.update(upperTick, amount);
+
+        if (flippedLower) {
+            tickBitmap.flipTick(lowerTick, 1);
+        }
+        if (flippedUpper) {
+            tickBitmap.flipTick(upperTick, 1);
+        }
 
         Position.Info storage position = positions.get(owner, lowerTick, upperTick);
         position.update(amount);
 
         // TODO: replace with actual calculations
-        amount0 = 0.998976618347425280 ether;
-        amount1 = 5000 ether;
+        amount0 = Math.calcAmount0Delta(
+            slot0.sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(upperTick),
+            amount
+        );
+        amount1 = Math.calcAmount1Delta(
+            slot0.sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(lowerTick),
+            amount
+        );
 
         liquidity += amount;
 
