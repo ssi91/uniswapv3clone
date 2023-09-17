@@ -165,9 +165,14 @@ contract UniswapV3PoolTest is Test {
         uint256 userBalance0Before = token0.balanceOf(address(this));
 
         token1.approve(address(this), 42 ether);
-        (int256 amount0Delta, int256 amount1Delta) = pool.swap(address(this), abi.encode(callbackData));
+        (int256 amount0Delta, int256 amount1Delta) = pool.swap(
+            address(this),
+            false,
+            42 ether,
+            abi.encode(callbackData)
+        );
 
-        assertEq(amount0Delta, - 0.008396714242162444 ether, "invalid ETH out");
+        assertEq(amount0Delta, - 0.008396714242162445 ether, "invalid ETH out");
         assertEq(amount1Delta, 42 ether, "invalid USDC in");
 
         assertEq(
@@ -198,7 +203,7 @@ contract UniswapV3PoolTest is Test {
             "invalid current liquidity"
         );
         (uint160 sqrtPriceX96, int24 tick) = pool.slot0();
-        assertEq(tick, 85154, "invalid current tick");
+        assertEq(tick, 85184, "invalid current tick");
         assertEq(sqrtPriceX96, 5604469350942327889444743441197, "invalid current price");
     }
 }
