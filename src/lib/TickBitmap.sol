@@ -10,7 +10,7 @@ library TickBitmap {
     }
 
     function flipTick(
-        mapping(uint16 => uint256) storage self,
+        mapping(int16 => uint256) storage self,
         int24 tick,
         int24 tickSpacing
     ) internal {
@@ -22,7 +22,7 @@ library TickBitmap {
     }
 
     function nextInitializedTickWithinOneWord(
-        mapping(uint16 => uint256) storage self,
+        mapping(int16 => uint256) storage self,
         int24 tick,
         int24 tickSpacing,
         bool lte // true - selling x; moving to the right
