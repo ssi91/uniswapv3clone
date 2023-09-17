@@ -100,7 +100,6 @@ contract UniswapV3Pool {
         Position.Info storage position = positions.get(owner, lowerTick, upperTick);
         position.update(amount);
 
-        // TODO: replace with actual calculations
         amount0 = Math.calcAmount0Delta(
             slot0.sqrtPriceX96,
             TickMath.getSqrtRatioAtTick(upperTick),
