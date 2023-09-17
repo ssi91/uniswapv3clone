@@ -34,8 +34,8 @@ contract UniswapV3PoolTest is Test {
     }
 
     function setupTestCase(TestCaseParams memory params) internal returns (uint256 poolBalance0, uint256 poolBalance1) {
-        token0.mint(address(this), params.wethBalance);
-        token1.mint(address(this), params.usdcBalance);
+        token0.mint(address(this), params.wethBalance * 10);
+        token1.mint(address(this), params.usdcBalance * 10);
 
         callbackData.token0 = address(token0);
         callbackData.token1 = address(token1);
@@ -44,8 +44,8 @@ contract UniswapV3PoolTest is Test {
         pool = new UniswapV3Pool(address(token0), address(token1), params.currentSqrtP, params.currentTick);
 
         if (params.mintLiquidity) {
-            token0.approve(address(this), params.wethBalance);
-            token1.approve(address(this), params.usdcBalance);
+            token0.approve(address(this), params.wethBalance * 10);
+            token1.approve(address(this), params.usdcBalance * 10);
             (poolBalance0, poolBalance1) = pool.mint(
                 address(this),
                 params.lowerTick,
@@ -114,8 +114,8 @@ contract UniswapV3PoolTest is Test {
 
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
-        uint256 expectedAmount0 = 0.998976618347425280 ether;
-        uint256 expectedAmount1 = 5000 ether;
+        uint256 expectedAmount0 = 0.998628802115141959 ether;
+        uint256 expectedAmount1 = 5000.209190920489524100 ether;
 
         assertEq(poolBalance0, expectedAmount0, "Incorrect token0 amount");
         assertEq(poolBalance1, expectedAmount1, "Incorrect token1 amount");
@@ -133,7 +133,6 @@ contract UniswapV3PoolTest is Test {
         (bool tickInitialized, uint128 tickLiquidity) = pool.ticks(params.lowerTick);
         assertTrue(tickInitialized, "tick is not initialized");
         assertEq(tickLiquidity, params.liquidity, "Wrong tick liquidity");
-
 
         (tickInitialized, tickLiquidity) = pool.ticks(params.upperTick);
         assertTrue(tickInitialized, "tick is not initialized");
@@ -161,6 +160,7 @@ contract UniswapV3PoolTest is Test {
 
         (uint256 poolBalance0, uint256 poolBalance1) = setupTestCase(params);
 
+        token1.transfer(0x0000000000000000000000000000000000000000, token1.balanceOf(address(this)));
         token1.mint(address(this), 42 ether);
         uint256 userBalance0Before = token0.balanceOf(address(this));
 
