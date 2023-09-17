@@ -32,9 +32,9 @@ library TickBitmap {
         if (lte) {
             (int16 wordPos, uint8 bitPos) = position(compressed);
             uint256 mask = (1 << bitPos) - 1 + (1 << bitPos);
-            uint256 masked = mask & self[wordPos];
+            uint256 masked = self[wordPos] & mask;
 
-            initialized = mask != 0;
+            initialized = masked != 0;
 
             next = initialized
                 ? (compressed - int24(uint24(bitPos - BitMath.mostSignificantBit(masked)))) * tickSpacing
@@ -42,9 +42,9 @@ library TickBitmap {
         } else {
             (int16 wordPos, uint8 bitPos) = position(compressed + 1);
             uint256 mask = ~((1 << bitPos) - 1);
-            uint256 masked = mask & self[wordPos];
+            uint256 masked = self[wordPos] & mask;
 
-            initialized = mask != 0;
+            initialized = masked != 0;
             next = initialized
                 ? (compressed + 1 + int24(uint24(BitMath.leastSignificantBit(masked) - bitPos))) * tickSpacing
                 : (compressed + 1 + int24(uint24(type(uint8).max - bitPos))) * tickSpacing;
