@@ -22,6 +22,6 @@ library Tick {
 
         tickInfo.liquidity = liquidityAfter;
 
-        flipped = (liquidityAfter != 0) != (liquidityBefore != 0);
+        flipped = (liquidityAfter == 0) != (liquidityBefore == 0);
     }
 }
