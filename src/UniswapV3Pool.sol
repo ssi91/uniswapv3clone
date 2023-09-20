@@ -116,20 +116,38 @@ contract UniswapV3Pool {
         Position.Info storage position = positions.get(owner, lowerTick, upperTick);
         position.update(amount);
 
-        amount0 = Math.calcAmount0Delta(
-            slot0.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(upperTick),
-            amount
-        );
-        amount1 = Math.calcAmount1Delta(
-            slot0.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(lowerTick),
-            amount
-        );
+        Slot0 memory slot0_ = slot0;
 
-        liquidity += amount;
+        if (slot0_.tick < lowerTick) {
+            amount0 = Math.calcAmount0Delta(
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount
+            );
+        } else if (slot0_.tick < upperTick) {
+            amount0 = Math.calcAmount0Delta(
+                slot0.sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount
+            );
+            amount1 = Math.calcAmount1Delta(
+                slot0.sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                amount
+            );
 
-        uint256 balance0Before;
+            // `liquidity` variable tracks liquidity that’s available immediately
+            liquidity += amount;  // TODO: calculate liquidity the right way
+        } else {
+            amount1 = Math.calcAmount1Delta(
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                amount
+            );
+        }
+
+
+            uint256 balance0Before;
         uint256 balance1Before;
         if (amount0 > 0) {
             balance0Before = balance0();
