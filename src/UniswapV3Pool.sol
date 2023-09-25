@@ -6,6 +6,7 @@ import "./lib/Tick.sol";
 import "./lib/TickMath.sol";
 import "./lib/SwapMath.sol";
 import "./lib/Position.sol";
+import "./lib/LiquidityMath.sol";
 import "./lib/TickBitmap.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IUniswapV3MintCallback.sol";
@@ -137,7 +138,7 @@ contract UniswapV3Pool {
             );
 
             // `liquidity` variable tracks liquidity that’s available immediately
-            liquidity += amount;  // TODO: calculate liquidity the right way
+            liquidity = LiquidityMath.addLiquidity(liquidity, amount);
         } else {
             amount1 = Math.calcAmount1Delta(
                 TickMath.getSqrtRatioAtTick(lowerTick),
@@ -146,8 +147,7 @@ contract UniswapV3Pool {
             );
         }
 
-
-            uint256 balance0Before;
+        uint256 balance0Before;
         uint256 balance1Before;
         if (amount0 > 0) {
             balance0Before = balance0();
