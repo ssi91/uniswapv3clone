@@ -24,6 +24,7 @@ contract UniswapV3Pool {
         uint256 amountCalculated;
         uint160 sqrtPriceX96;
         int24 tick;
+        uint128 liquidity;
     }
 
     struct StepState {
@@ -187,7 +188,8 @@ contract UniswapV3Pool {
             amountSpecifiedRemaining: amountSpecified,
             amountCalculated: 0,
             sqrtPriceX96: slot0_.sqrtPriceX96,
-            tick: slot0_.tick
+            tick: slot0_.tick,
+            liquidity: liquidity
         });
 
         while (state.amountSpecifiedRemaining > 0) {
@@ -205,14 +207,31 @@ contract UniswapV3Pool {
             (state.sqrtPriceX96, step.amountIn, step.amountOut) = SwapMath.computeSwapStep(
                 state.sqrtPriceX96,
                 step.sqrtPriceNextX96,
-                liquidity,
+                state.liquidity,
                 state.amountSpecifiedRemaining
             );
 
             state.amountSpecifiedRemaining -= step.amountIn;
             state.amountCalculated += step.amountOut;
-            state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
+
+            if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
+                int128 liquidityDelta = ticks.cross(step.nextTick);
+
+                if (zeroToOne) {
+                    liquidityDelta = - liquidityDelta;
+                }
+
+                state.liquidity = LiquidityMath.addLiquidity(liquidity, liquidityDelta);
+                assert(state.liquidity, "Not enough liquidity");
+
+                state.tick = zeroToOne ? step.nextTick - 1 : step.nextTick;
+            } else {
+                state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
+            }
         }
+
+        if (liquidity != state.liquidity)
+            liquidity = state.liquidity;
 
         // next, update the current tick and price
         if (slot0.tick != state.tick)
